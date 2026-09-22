@@ -383,3 +383,113 @@ def test_pr_06_pricing_vs_faq_consistency(page: Page) -> None:
     print("[STEP 12] Pricing page and FAQ pricing are consistent")
 
     print("[RESULT] TC-PR-06 PASSED")
+
+def test_pr_07_no_outdated_pricing(page: Page) -> None:
+
+    print("\n[TC-PR-07] Starting No Outdated Pricing Test")
+
+    # ==========================================
+    # STEP 1: Open Pricing page
+    # ==========================================
+
+    page.goto("https://thaura.ai/pricing")
+    page.wait_for_timeout(2000)
+
+    print("[STEP 1] Pricing page opened")
+
+    # ==========================================
+    # STEP 2: Verify Monthly pricing
+    # ==========================================
+
+    page.get_by_role("button", name="View Plans").click()
+    page.wait_for_timeout(1500)
+
+    print("[STEP 2] View Plans clicked")
+
+    page.get_by_role("tab", name="Monthly").click()
+    page.wait_for_timeout(1000)
+
+    print("[STEP 3] Monthly plan selected")
+
+    expect(
+        page.get_by_text("$15", exact=True)
+    ).to_be_visible()
+
+    print("[STEP 4] Current Monthly price verified: $15/month")
+
+    # ==========================================
+    # STEP 3: Verify Annual pricing
+    # ==========================================
+
+    page.get_by_role("tab", name="Annual Save 20%").click()
+    page.wait_for_timeout(1000)
+
+    print("[STEP 5] Annual plan selected")
+
+    expect(
+        page.get_by_text("$12", exact=True)
+    ).to_be_visible()
+
+    expect(
+        page.get_by_text("Billed $144/year", exact=True)
+    ).to_be_visible()
+
+    print("[STEP 6] Current Annual price verified: $12/month")
+    print("[STEP 7] Current Annual billing verified: $144/year")
+
+    # ==========================================
+    # STEP 4: Check FAQ pricing references
+    # ==========================================
+
+    page.goto("https://thaura.ai/faq")
+    page.wait_for_timeout(2000)
+
+    print("[STEP 8] FAQ page opened")
+
+    faq_text = page.locator("body").inner_text()
+
+    print("[STEP 9] FAQ page content collected")
+
+    # FAQ legitimately references $15 pricing
+    expect(
+        page.get_by_text(
+            "Why is your pricing set at $15?",
+            exact=True
+        )
+    ).to_be_visible()
+
+    print("[STEP 10] FAQ contains legitimate $15 pricing reference")
+
+    # ==========================================
+    # STEP 5: Check for outdated pricing values
+    # ==========================================
+
+    outdated_prices = [
+        "$10/month",
+        "$20/month",
+        "$18/month",
+        "$144/month",
+        "$180/month"
+    ]
+
+    found_outdated_prices = []
+
+    for price in outdated_prices:
+        if price in faq_text:
+            found_outdated_prices.append(price)
+            print(
+                f"[STEP 11] Potential outdated pricing found: {price}"
+            )
+
+    # ==========================================
+    # STEP 6: Final validation
+    # ==========================================
+
+    assert not found_outdated_prices, (
+        "Potential outdated pricing found in FAQ: "
+        + ", ".join(found_outdated_prices)
+    )
+
+    print("[STEP 12] No outdated pricing references found in FAQ")
+
+    print("[RESULT] TC-PR-07 PASSED")
