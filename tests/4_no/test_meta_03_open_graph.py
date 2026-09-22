@@ -31,12 +31,16 @@ OG_TAGS = [
 
 @pytest.mark.parametrize("url", PAGES)
 def test_open_graph_tags(page: Page, url):
+
     page.goto(url, wait_until="domcontentloaded")
 
     expected_url = url.rstrip("/")
 
     for tag in OG_TAGS:
-        locator = page.locator(f'meta[property="{tag}"]')
+
+        locator = page.locator(
+            f'meta[property="{tag}"]'
+        )
 
         # Exactly one tag
         assert locator.count() == 1, (
@@ -59,6 +63,7 @@ def test_open_graph_tags(page: Page, url):
 
         # og:url must match current page
         if tag == "og:url":
+
             actual_url = content.rstrip("/")
 
             assert actual_url == expected_url, (
@@ -70,3 +75,46 @@ def test_open_graph_tags(page: Page, url):
         print(f"{tag}: {content}")
 
     print(f"\nPASS: {url}")
+
+
+# ==========================================================
+# SUMMARY
+# ==========================================================
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+
+    reports = terminalreporter.getreports("call")
+
+    passed = sum(
+        1 for report in reports
+        if report.passed
+    )
+
+    failed = sum(
+        1 for report in reports
+        if report.failed
+    )
+
+    skipped = sum(
+        1 for report in reports
+        if report.skipped
+    )
+
+    total = passed + failed + skipped
+
+    print("\n")
+    print("=" * 70)
+    print("TC-META-03 OPEN GRAPH TAGS SUMMARY")
+    print("=" * 70)
+    print(f"Total Pages Tested : {total}")
+    print(f"PASS               : {passed}")
+    print(f"FAIL               : {failed}")
+    print(f"SKIPPED            : {skipped}")
+    print("=" * 70)
+
+    if failed == 0:
+        print("FINAL RESULT       : PASS")
+    else:
+        print("FINAL RESULT       : FAIL")
+
+    print("=" * 70)

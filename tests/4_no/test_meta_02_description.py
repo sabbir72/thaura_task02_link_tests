@@ -23,28 +23,71 @@ PAGES = [
 
 @pytest.mark.parametrize("url", PAGES)
 def test_meta_description(page: Page, url):
+
     page.goto(url, wait_until="domcontentloaded")
 
-    description = page.locator('meta[name="description"]')
+    description = page.locator(
+        'meta[name="description"]'
+    )
 
-    # Exactly one meta description
     assert description.count() == 1, (
         f"{url}: Expected exactly 1 meta description, "
         f"found {description.count()}"
     )
 
-    # Get content
     content = description.get_attribute("content")
 
-    # Content must exist
     assert content is not None, (
-        f"{url}: Meta description content attribute is missing"
+        f"{url}: Meta description content "
+        f"attribute is missing"
     )
 
-    # Content must not be empty
     assert content.strip() != "", (
         f"{url}: Meta description content is empty"
     )
 
     print(f"\nPASS: {url}")
     print(f"Meta Description: {content}")
+
+
+# ==========================================================
+# SUMMARY
+# ==========================================================
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+
+    reports = terminalreporter.getreports("call")
+
+    passed = sum(
+        1 for report in reports
+        if report.passed
+    )
+
+    failed = sum(
+        1 for report in reports
+        if report.failed
+    )
+
+    skipped = sum(
+        1 for report in reports
+        if report.skipped
+    )
+
+    total = passed + failed + skipped
+
+    print("\n")
+    print("=" * 70)
+    print("TC-META-02 META DESCRIPTION SUMMARY")
+    print("=" * 70)
+    print(f"Total Pages Tested : {total}")
+    print(f"PASS               : {passed}")
+    print(f"FAIL               : {failed}")
+    print(f"SKIPPED            : {skipped}")
+    print("=" * 70)
+
+    if failed == 0:
+        print("FINAL RESULT       : PASS")
+    else:
+        print("FINAL RESULT       : FAIL")
+
+    print("=" * 70)
