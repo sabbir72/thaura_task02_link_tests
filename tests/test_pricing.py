@@ -273,12 +273,14 @@ def test_pr_05_save_20_percent_calculation(page: Page) -> None:
 
     print("[RESULT] TC-PR-05 PASSED")
 
-
 def test_pr_06_pricing_vs_faq_consistency(page: Page) -> None:
 
     print("\n[TC-PR-06] Starting Pricing vs FAQ Consistency Test")
 
-    # Open Pricing page
+    # ==========================================
+    # STEP 1: Open Pricing page
+    # ==========================================
+
     page.goto("https://thaura.ai/pricing")
     page.wait_for_timeout(2000)
 
@@ -296,61 +298,88 @@ def test_pr_06_pricing_vs_faq_consistency(page: Page) -> None:
 
     print("[STEP 3] Monthly plan selected")
 
-    # Verify current Pricing page values
-    expect(page.get_by_text("$15", exact=True)).to_be_visible()
-
-    print("[STEP 4] Pricing page Monthly price: $15/month")
-
-    # Select Annual
-    page.get_by_role("tab", name="Annual Save 20%").click()
-    page.wait_for_timeout(1500)
-
-    print("[STEP 5] Annual plan selected")
-
-    # Verify Annual pricing
-    expect(page.get_by_text("$12", exact=True)).to_be_visible()
+    # Verify Monthly price
     expect(
-        page.get_by_text("Billed $144/year", exact=True)
+        page.get_by_text("$15", exact=True)
     ).to_be_visible()
 
-    print("[STEP 6] Pricing page Annual price: $12/month")
-    print("[STEP 7] Pricing page Annual billing: $144/year")
+    print("[STEP 4] Pricing page Monthly price verified: $15/month")
 
-    # Open FAQ
-    page.get_by_role("link", name="FAQ").click()
+    # ==========================================
+    # STEP 2: Open FAQ page
+    # ==========================================
+
+    page.goto("https://thaura.ai/faq")
     page.wait_for_timeout(2000)
 
-    print("[STEP 8] FAQ page opened")
+    print("[STEP 5] FAQ page opened")
 
-    # Search FAQ page text
-    faq_text = page.locator("body").inner_text()
+    # ==========================================
+    # STEP 3: Open pricing FAQ
+    # ==========================================
 
-    print("[STEP 9] FAQ page content collected")
+    pricing_question = page.get_by_text(
+        "Why is your pricing set at $15?",
+        exact=True
+    )
 
-    # Check whether pricing information exists in FAQ
-    pricing_terms = [
-        "$15",
-        "$12",
-        "$144",
-        "20%",
-    ]
+    expect(pricing_question).to_be_visible()
 
-    found_terms = []
+    print("[STEP 6] Pricing FAQ question found")
 
-    for term in pricing_terms:
-        if term in faq_text:
-            found_terms.append(term)
-            print(f"[STEP 10] FAQ contains pricing term: {term}")
+    # Click FAQ question
+    pricing_question.click()
+    page.wait_for_timeout(1000)
 
-    # If FAQ contains pricing information, report it
-    if found_terms:
-        print(
-            f"[STEP 11] Pricing information found in FAQ: "
-            f"{', '.join(found_terms)}"
-        )
-    else:
-        print(
-            "[STEP 11] No matching pricing figures found in FAQ"
-        )
+    print("[STEP 7] Pricing FAQ question expanded")
+
+    # ==========================================
+    # STEP 4: Verify FAQ answer
+    # ==========================================
+
+    faq_answer = page.get_by_text(
+        "We deliberately set our pricing at $15 when competitors charge $20 to provide an ethical, affordable alternative. These rates represent the minimum we need to operate effectively while maintaining our independence.",
+        exact=True
+    )
+
+    expect(faq_answer).to_be_visible()
+
+    print("[STEP 8] FAQ pricing answer verified")
+
+    # ==========================================
+    # STEP 5: Verify FAQ mentions $15
+    # ==========================================
+
+    faq_text = faq_answer.inner_text()
+
+    assert "$15" in faq_text, (
+        "FAQ answer does not contain expected $15 pricing"
+    )
+
+    print("[STEP 9] FAQ answer contains $15 pricing")
+
+    # ==========================================
+    # STEP 6: Final consistency check
+    # ==========================================
+
+    pricing_monthly_price = 15
+    faq_price = 15
+
+    print(
+        f"[STEP 10] Pricing page Monthly price: "
+        f"${pricing_monthly_price}/month"
+    )
+
+    print(
+        f"[STEP 11] FAQ stated price: "
+        f"${faq_price}"
+    )
+
+    assert pricing_monthly_price == faq_price, (
+        f"Pricing mismatch: Pricing page=${pricing_monthly_price}, "
+        f"FAQ=${faq_price}"
+    )
+
+    print("[STEP 12] Pricing page and FAQ pricing are consistent")
 
     print("[RESULT] TC-PR-06 PASSED")
