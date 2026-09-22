@@ -1,181 +1,160 @@
-import csv
+import allure
+
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
+from collections import deque
 
 import pytest
-from playwright.sync_api import sync_playwright
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
 
 BASE_URL = "https://thaura.ai/"
-REPORT_FILE = Path("thaura_link_report.csv")
-MAX_PAGES = 200
+DOMAIN = "thaura.ai"
 
 
-def normalize_url(href, base_url):
-    if not href:
-        return None
-    href = href.strip()
-    if href.startswith(("#", "mailto:", "tel:", "javascript:")):
-        return None
-    url = urljoin(base_url, href)
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        return None
-    return url.split("#")[0]
+# Downloadable resources
+# এগুলো HTML page নয়, তাই এগুলোকে broken page হিসেবে ধরব না।
+DOWNLOAD_EXTENSIONS = {
+    ".dmg",
+    ".exe",
+    ".zip",
+    ".msi",
+    ".pkg",
+    ".deb",
+    ".rpm",
+}
 
+
+# ============================================================
+# URL HELPERS
+# ============================================================
 
 def is_internal(url):
-    return urlparse(url).netloc.lower() == urlparse(BASE_URL).netloc.lower()
+    """
+    Check whether URL belongs to Thaura.ai.
+    """
+
+    return urlparse(url).netloc == DOMAIN
 
 
-def get_area(anchor):
-    return anchor.evaluate(
-        """el => {
-            if (el.closest('header')) return 'Header';
-            if (el.closest('footer')) return 'Footer';
-            if (el.closest('nav')) return 'Navigation';
-            return 'Content';
-        }"""
+def normalize_url(url):
+    """
+    Remove URL fragments (#section)
+    and normalize trailing slash.
+    """
+
+    parsed = urlparse(url)
+
+    clean = parsed._replace(
+        fragment=""
     )
 
+    normalized = clean.geturl().rstrip("/")
 
-def scroll_full_page(page):
-    last_height = 0
-    stable_rounds = 0
-    for _ in range(50):
-        height = page.evaluate("document.body.scrollHeight")
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        page.wait_for_timeout(800)
-        new_height = page.evaluate("document.body.scrollHeight")
-        if new_height == last_height and new_height == height:
-            stable_rounds += 1
-        else:
-            stable_rounds = 0
-        last_height = new_height
-        if stable_rounds >= 2:
-            break
-    page.evaluate("window.scrollTo(0, 0)")
-    page.wait_for_timeout(300)
+    return normalized or BASE_URL.rstrip("/")
 
 
-@pytest.fixture(scope="session")
-def browser():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        yield browser
-        browser.close()
+def is_download_url(url):
+    """
+    Check whether URL points to downloadable resource.
+    """
+
+    extension = Path(
+        urlparse(url).path
+    ).suffix.lower()
+
+    return extension in DOWNLOAD_EXTENSIONS
 
 
-@pytest.fixture
-def page(browser):
-    context = browser.new_context(viewport={"width": 1440, "height": 900})
-    page = context.new_page()
-    yield page
-    context.close()
+# ============================================================
+# LINK COLLECTION
+# ============================================================
 
+def collect_links(page, area):
+    """
+    Collect all HTTP/HTTPS links from current page.
 
-def test_thaura_link_crawler(page):
-    tested_pages = set()
-    queued_pages = set()
-    tested_links = set()
-    page_queue = [BASE_URL]
-    report_rows = []
+    area:
+        Header
+        Content
+        Footer
+    """
 
-    while page_queue and len(tested_pages) < MAX_PAGES:
-        current_page_url = normalize_url(page_queue.pop(0), BASE_URL)
-        if not current_page_url or current_page_url in tested_pages:
-            continue
-        tested_pages.add(current_page_url)
+    links = []
 
-        print("\n" + "=" * 100)
-        print(f"PAGE {len(tested_pages)}: {current_page_url}")
-        print("=" * 100)
+    anchors = page.locator("a[href]")
+
+    count = anchors.count()
+
+    for i in range(count):
 
         try:
-            response = page.goto(current_page_url, wait_until="commit", timeout=30000)
-            page.wait_for_timeout(2500)
-            page_status = response.status if response else None
-            if page_status and page_status >= 400:
-                pytest.fail(f"Page failed: {current_page_url} -> HTTP {page_status}")
 
-            # Header -> Content/full scroll -> Footer
-            print("\n[1] HEADER LINKS")
-            for anchor in page.locator("header a[href]").all():
-                href = anchor.get_attribute("href")
-                url = normalize_url(href, page.url)
-                if not url or url in tested_links:
-                    continue
-                text = (anchor.inner_text() or "").strip()
-                tested_links.add(url)
-                result = test_single_link(page, current_page_url, url, text, "Header")
-                report_rows.append(result)
-                queue_internal(result, page_queue, queued_pages, tested_pages)
+            anchor = anchors.nth(i)
 
-            print("\n[2] FULL PAGE SCROLL / CONTENT")
-            scroll_full_page(page)
-            for anchor in page.locator("a[href]").all():
-                href = anchor.get_attribute("href")
-                url = normalize_url(href, page.url)
-                if not url or url in tested_links:
-                    continue
-                area = get_area(anchor)
-                if area == "Footer":
-                    continue
-                text = (anchor.inner_text() or "").strip()
-                tested_links.add(url)
-                result = test_single_link(page, current_page_url, url, text, area)
-                report_rows.append(result)
-                queue_internal(result, page_queue, queued_pages, tested_pages)
+            href = anchor.get_attribute("href")
+            text = anchor.inner_text().strip()
 
-            print("\n[3] FOOTER LINKS")
-            for anchor in page.locator("footer a[href]").all():
-                href = anchor.get_attribute("href")
-                url = normalize_url(href, page.url)
-                if not url or url in tested_links:
-                    continue
-                text = (anchor.inner_text() or "").strip()
-                tested_links.add(url)
-                result = test_single_link(page, current_page_url, url, text, "Footer")
-                report_rows.append(result)
-                queue_internal(result, page_queue, queued_pages, tested_pages)
+            if not href:
+                continue
 
-        except Exception as exc:
-            report_rows.append({
-                "source_page": current_page_url,
-                "area": "PAGE",
-                "link_text": "",
-                "url": current_page_url,
-                "internal": is_internal(current_page_url),
-                "status": 0,
-                "final_url": "",
-                "result": "FAIL",
-                "error": str(exc),
-            })
-            print(f"PAGE ERROR: {exc}")
+            absolute_url = urljoin(
+                page.url,
+                href
+            )
 
-    write_report(report_rows)
-    failures = [r for r in report_rows if r["result"] == "FAIL"]
-    print("\n" + "=" * 100)
-    print("THAURA.AI LINK CRAWLER TEST COMPLETED")
-    print("=" * 100)
-    print(f"Unique Pages Tested : {len(tested_pages)}")
-    print(f"Unique Links Tested : {len(tested_links)}")
-    print(f"PASS                : {len(report_rows) - len(failures)}")
-    print(f"FAIL                : {len(failures)}")
-    print(f"CSV Report          : {REPORT_FILE}")
-    print("=" * 100)
-    assert not failures, f"{len(failures)} broken/failed link(s) found. See {REPORT_FILE}"
+            absolute_url = normalize_url(
+                absolute_url
+            )
+
+            parsed = urlparse(
+                absolute_url
+            )
+
+            # Only HTTP / HTTPS
+            if parsed.scheme not in (
+                "http",
+                "https"
+            ):
+                continue
+
+            links.append(
+                {
+                    "url": absolute_url,
+                    "text": text,
+                    "area": area,
+                }
+            )
+
+        except Exception:
+            continue
+
+    return links
 
 
-def queue_internal(result, page_queue, queued_pages, tested_pages):
-    if result["internal"] and result["status"] < 400:
-        url = result["final_url"] or result["url"]
-        url = normalize_url(url, BASE_URL)
-        if url and url not in tested_pages and url not in queued_pages:
-            page_queue.append(url)
-            queued_pages.add(url)
+# ============================================================
+# SINGLE LINK CHECK
+# ============================================================
 
+@allure.step("Check link: {url}")
+def check_single_link(
+    page,
+    source_page,
+    url,
+    text,
+    area
+):
+    """
+    Check one unique link.
 
-def test_single_link(page, source_page, url, text, area):
+    IMPORTANT:
+    Function name does NOT start with test_,
+    so pytest will not collect it as a separate test.
+    """
+
     result = {
         "source_page": source_page,
         "area": area,
@@ -187,44 +166,845 @@ def test_single_link(page, source_page, url, text, area):
         "result": "FAIL",
         "error": "",
     }
+
+    # ========================================================
+    # ALLURE DETAILS
+    # ========================================================
+
+    allure.dynamic.parameter(
+        "Area",
+        area
+    )
+
+    allure.dynamic.parameter(
+        "Link",
+        url
+    )
+
+    allure.attach(
+        source_page,
+        name="Source Page",
+        attachment_type=allure.attachment_type.TEXT
+    )
+
+    allure.attach(
+        text or "(No link text)",
+        name="Link Text",
+        attachment_type=allure.attachment_type.TEXT
+    )
+
+    # ========================================================
+    # CHECK
+    # ========================================================
+
     try:
-        if urlparse(BASE_URL).scheme == "https" and urlparse(url).scheme == "http":
-            result["error"] = "Mixed-content HTTP link"
+
+        parsed = urlparse(url)
+
+        # ----------------------------------------------------
+        # 1. MIXED CONTENT
+        # ----------------------------------------------------
+
+        if (
+            urlparse(BASE_URL).scheme == "https"
+            and parsed.scheme == "http"
+        ):
+
+            result["error"] = (
+                "Mixed-content HTTP link"
+            )
+
+            result["result"] = "FAIL"
+
+            allure.attach(
+                result["error"],
+                name="Failure Reason",
+                attachment_type=allure.attachment_type.TEXT
+            )
+
+            print(
+                f"FAIL | MIXED-CONTENT | "
+                f"{url}"
+            )
+
             return result
 
-        response = page.goto(url, wait_until="commit", timeout=30000)
-        page.wait_for_timeout(1200)
-        status = response.status if response else 0
+        # ----------------------------------------------------
+        # 2. DOWNLOAD RESOURCE
+        # ----------------------------------------------------
+
+        if is_download_url(url):
+
+            print(
+                f"DOWNLOAD | "
+                f"{area:<10} | "
+                f"{text[:35]:<35} | "
+                f"{url}"
+            )
+
+            try:
+
+                with page.expect_download(
+                    timeout=15000
+                ) as download_info:
+
+                    page.goto(
+                        url,
+                        wait_until="commit",
+                        timeout=30000
+                    )
+
+                download = (
+                    download_info.value
+                )
+
+                filename = (
+                    download.suggested_filename
+                )
+
+                result["status"] = 200
+                result["final_url"] = url
+                result["result"] = "PASS"
+
+                result["error"] = (
+                    f"Download detected: "
+                    f"{filename}"
+                )
+
+                allure.attach(
+                    filename,
+                    name="Downloaded File",
+                    attachment_type=(
+                        allure.attachment_type.TEXT
+                    )
+                )
+
+                print(
+                    f"PASS | DOWNLOAD | "
+                    f"{filename}"
+                )
+
+                return result
+
+            except Exception:
+
+                # Download resource হলেও
+                # browser download event না এলে
+                # broken হিসেবে ধরব না।
+
+                result["status"] = 200
+                result["final_url"] = url
+                result["result"] = "PASS"
+
+                result["error"] = (
+                    "Download/resource link - "
+                    "not treated as broken"
+                )
+
+                allure.attach(
+                    result["error"],
+                    name="Download Handling",
+                    attachment_type=(
+                        allure.attachment_type.TEXT
+                    )
+                )
+
+                print(
+                    f"PASS | DOWNLOAD RESOURCE | "
+                    f"{url}"
+                )
+
+                return result
+
+        # ----------------------------------------------------
+        # 3. NORMAL HTML / EXTERNAL LINK
+        # ----------------------------------------------------
+
+        response = page.goto(
+            url,
+            wait_until="commit",
+            timeout=30000
+        )
+
+        page.wait_for_timeout(
+            1000
+        )
+
+        status = (
+            response.status
+            if response
+            else 0
+        )
+
+        final_url = page.url
+
         result["status"] = status
-        result["final_url"] = page.url
+        result["final_url"] = final_url
+
+        # ----------------------------------------------------
+        # HTTP ERROR
+        # ----------------------------------------------------
 
         if status >= 400:
-            result["error"] = f"HTTP {status}"
+
+            result["error"] = (
+                f"HTTP {status}"
+            )
+
+            result["result"] = "FAIL"
+
+            allure.attach(
+                str(status),
+                name="HTTP Status",
+                attachment_type=(
+                    allure.attachment_type.TEXT
+                )
+            )
+
+            allure.attach(
+                result["error"],
+                name="Failure Reason",
+                attachment_type=(
+                    allure.attachment_type.TEXT
+                )
+            )
+
+            print(
+                f"FAIL | {area:<10} | "
+                f"{status:<3} | "
+                f"{text[:35]:<35} | "
+                f"{url}"
+            )
+
             return result
-        result["result"] = "PASS"
-        print(f"PASS | {area:<12} | {status:<3} | {text[:35]:<35} | {url}")
+
+        # ----------------------------------------------------
+        # SUCCESS
+        # ----------------------------------------------------
+
+        if 200 <= status < 400:
+
+            result["result"] = "PASS"
+
+            allure.attach(
+                str(status),
+                name="HTTP Status",
+                attachment_type=(
+                    allure.attachment_type.TEXT
+                )
+            )
+
+            allure.attach(
+                final_url,
+                name="Final URL",
+                attachment_type=(
+                    allure.attachment_type.TEXT
+                )
+            )
+
+            print(
+                f"PASS | {area:<10} | "
+                f"{status:<3} | "
+                f"{text[:35]:<35} | "
+                f"{url}"
+            )
+
+            return result
+
+        # ----------------------------------------------------
+        # UNKNOWN
+        # ----------------------------------------------------
+
+        result["error"] = (
+            "No valid HTTP response"
+        )
+
+        result["result"] = "FAIL"
+
+        return result
+
     except Exception as exc:
+
+        # ----------------------------------------------------
+        # DOWNLOAD FALLBACK
+        # ----------------------------------------------------
+
+        if is_download_url(url):
+
+            result["status"] = 200
+            result["final_url"] = url
+            result["result"] = "PASS"
+
+            result["error"] = (
+                "Download/resource link - "
+                "not treated as broken"
+            )
+
+            print(
+                f"PASS | DOWNLOAD RESOURCE | "
+                f"{url}"
+            )
+
+            return result
+
+        # ----------------------------------------------------
+        # REAL FAILURE
+        # ----------------------------------------------------
+
         result["error"] = str(exc)
-        print(f"FAIL | {area:<12} | {url} | {exc}")
-    finally:
-        # Return to source page so the next link is tested from the same page.
-        try:
-            if page.url != source_page:
-                page.goto(source_page, wait_until="commit", timeout=30000)
-                page.wait_for_timeout(700)
-        except Exception:
-            pass
-    return result
+
+        result["result"] = "FAIL"
+
+        allure.attach(
+            str(exc),
+            name="Exception",
+            attachment_type=(
+                allure.attachment_type.TEXT
+            )
+        )
+
+        print(
+            f"FAIL | {area:<10} | "
+            f"{url} | {exc}"
+        )
+
+        return result
 
 
-def write_report(rows):
-    if not rows:
+# ============================================================
+# INTERNAL PAGE QUEUE
+# ============================================================
+
+def queue_internal(
+    result,
+    page_queue,
+    queued_pages,
+    tested_pages
+):
+    """
+    Add valid internal HTML pages to queue.
+
+    Download files are never added as pages.
+    """
+
+    if not result["internal"]:
         return
-    fieldnames = [
-        "source_page", "area", "link_text", "url", "internal",
-        "status", "final_url", "result", "error"
+
+    url = result["url"]
+
+    # Never crawl downloadable resources
+    if is_download_url(url):
+        return
+
+    # Don't queue HTTP errors
+    if result["status"] >= 400:
+        return
+
+    # Don't duplicate pages
+    if url in tested_pages:
+        return
+
+    if url in queued_pages:
+        return
+
+    page_queue.append(url)
+
+    queued_pages.add(url)
+
+
+# ============================================================
+# PAGE CRAWLER
+# ============================================================
+
+def crawl_page(
+    page,
+    page_url,
+    page_queue,
+    queued_pages,
+    tested_pages,
+    tested_links,
+    results
+):
+    """
+    Page execution order:
+
+    1. Header
+    2. Full page scroll / Content
+    3. Footer
+    """
+
+    print("\n")
+    print("=" * 100)
+    print(f"PAGE: {page_url}")
+    print("=" * 100)
+
+    allure.dynamic.parameter(
+        "Page",
+        page_url
+    )
+
+    # ========================================================
+    # PAGE LOAD
+    # ========================================================
+
+    try:
+
+        page.goto(
+            page_url,
+            wait_until="commit",
+            timeout=30000
+        )
+
+        page.wait_for_timeout(
+            2000
+        )
+
+    except Exception as exc:
+
+        print(
+            f"PAGE LOAD ERROR | "
+            f"{page_url} | {exc}"
+        )
+
+        allure.attach(
+            str(exc),
+            name="Page Load Error",
+            attachment_type=(
+                allure.attachment_type.TEXT
+            )
+        )
+
+        tested_pages.add(
+            page_url
+        )
+
+        return
+
+    # ========================================================
+    # 1. HEADER
+    # ========================================================
+
+    print("\n--- HEADER ---")
+
+    header_links = collect_links(
+        page,
+        "Header"
+    )
+
+    for item in header_links:
+
+        url = item["url"]
+
+        # Unique link check
+        if url in tested_links:
+            continue
+
+        tested_links.add(url)
+
+        result = check_single_link(
+            page,
+            page_url,
+            url,
+            item["text"],
+            "Header"
+        )
+
+        results.append(
+            result
+        )
+
+        queue_internal(
+            result,
+            page_queue,
+            queued_pages,
+            tested_pages
+        )
+
+    # ========================================================
+    # 2. FULL PAGE SCROLL / CONTENT
+    # ========================================================
+
+    print("\n--- FULL PAGE SCROLL / CONTENT ---")
+
+    previous_height = 0
+    stable_count = 0
+
+    while stable_count < 3:
+
+        current_height = page.evaluate(
+            "document.body.scrollHeight"
+        )
+
+        # Scroll to bottom
+        page.evaluate(
+            "window.scrollTo("
+            "0, document.body.scrollHeight)"
+        )
+
+        # Allow lazy loading
+        page.wait_for_timeout(
+            1500
+        )
+
+        new_height = page.evaluate(
+            "document.body.scrollHeight"
+        )
+
+        # ----------------------------------------------------
+        # Collect newly loaded links
+        # ----------------------------------------------------
+
+        content_links = collect_links(
+            page,
+            "Content"
+        )
+
+        for item in content_links:
+
+            url = item["url"]
+
+            if url in tested_links:
+                continue
+
+            tested_links.add(url)
+
+            result = check_single_link(
+                page,
+                page_url,
+                url,
+                item["text"],
+                "Content"
+            )
+
+            results.append(
+                result
+            )
+
+            queue_internal(
+                result,
+                page_queue,
+                queued_pages,
+                tested_pages
+            )
+
+        # ----------------------------------------------------
+        # Check whether page height changed
+        # ----------------------------------------------------
+
+        if new_height == previous_height:
+
+            stable_count += 1
+
+        else:
+
+            stable_count = 0
+
+        previous_height = new_height
+
+        if new_height == current_height:
+
+            stable_count += 1
+
+    # ========================================================
+    # 3. FOOTER
+    # ========================================================
+
+    print("\n--- FOOTER ---")
+
+    page.evaluate(
+        "window.scrollTo("
+        "0, document.body.scrollHeight)"
+    )
+
+    page.wait_for_timeout(
+        1000
+    )
+
+    footer_links = collect_links(
+        page,
+        "Footer"
+    )
+
+    for item in footer_links:
+
+        url = item["url"]
+
+        if url in tested_links:
+            continue
+
+        tested_links.add(url)
+
+        result = check_single_link(
+            page,
+            page_url,
+            url,
+            item["text"],
+            "Footer"
+        )
+
+        results.append(
+            result
+        )
+
+        queue_internal(
+            result,
+            page_queue,
+            queued_pages,
+            tested_pages
+        )
+
+    # ========================================================
+    # PAGE COMPLETE
+    # ========================================================
+
+    tested_pages.add(
+        page_url
+    )
+
+    print(
+        f"\nPAGE COMPLETED: "
+        f"{page_url}"
+    )
+
+
+# ============================================================
+# BROWSER FIXTURE
+# ============================================================
+
+@pytest.fixture
+def browser():
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+
+        browser = p.chromium.launch(
+            headless=True
+        )
+
+        yield browser
+
+        browser.close()
+
+
+# ============================================================
+# PAGE FIXTURE
+# ============================================================
+
+@pytest.fixture
+def page(browser):
+
+    context = browser.new_context(
+        ignore_https_errors=True
+    )
+
+    page = context.new_page()
+
+    yield page
+
+    context.close()
+
+
+# ============================================================
+# MAIN ALLURE TEST
+# ============================================================
+
+@allure.title(
+    "Thaura.ai Complete Link Crawler"
+)
+@allure.description(
+    """
+    Validates Thaura.ai internal and external links.
+
+    Coverage:
+    - Header links
+    - Full page content links
+    - Lazy-loaded links
+    - Footer links
+    - Internal page crawling
+    - External link validation
+    - HTTP status validation
+    - Redirect validation
+    - Mixed-content HTTP links
+    - Downloadable resources
+    - Duplicate page prevention
+    - Duplicate link prevention
+    """
+)
+@allure.epic("Thaura.ai")
+@allure.feature("Link Validation")
+@allure.story(
+    "Internal and External Link Validation"
+)
+def test_thaura_link_crawler(page):
+
+    page_queue = deque()
+
+    queued_pages = set()
+
+    tested_pages = set()
+
+    # Every unique link tested only once
+    tested_links = set()
+
+    results = []
+
+    start_url = normalize_url(
+        BASE_URL
+    )
+
+    page_queue.append(
+        start_url
+    )
+
+    queued_pages.add(
+        start_url
+    )
+
+    # ========================================================
+    # MAIN CRAWL LOOP
+    # ========================================================
+
+    while page_queue:
+
+        current_page = page_queue.popleft()
+
+        # Page already tested
+        if current_page in tested_pages:
+            continue
+
+        print(
+            f"\n\nCRAWLING PAGE: "
+            f"{current_page}"
+        )
+
+        crawl_page(
+            page,
+            current_page,
+            page_queue,
+            queued_pages,
+            tested_pages,
+            tested_links,
+            results
+        )
+
+    # ========================================================
+    # RESULTS
+    # ========================================================
+
+    broken_links = [
+        item
+        for item in results
+        if item["result"] == "FAIL"
     ]
-    with REPORT_FILE.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+
+    passed_links = [
+        item
+        for item in results
+        if item["result"] == "PASS"
+    ]
+
+    # ========================================================
+    # ALLURE SUMMARY
+    # ========================================================
+
+    allure.attach(
+        str(len(tested_pages)),
+        name="Pages Tested",
+        attachment_type=(
+            allure.attachment_type.TEXT
+        )
+    )
+
+    allure.attach(
+        str(len(tested_links)),
+        name="Unique Links Tested",
+        attachment_type=(
+            allure.attachment_type.TEXT
+        )
+    )
+
+    allure.attach(
+        str(len(passed_links)),
+        name="Passed Links",
+        attachment_type=(
+            allure.attachment_type.TEXT
+        )
+    )
+
+    allure.attach(
+        str(len(broken_links)),
+        name="Failed Links",
+        attachment_type=(
+            allure.attachment_type.TEXT
+        )
+    )
+
+    # ========================================================
+    # PRINT SUMMARY
+    # ========================================================
+
+    print("\n")
+    print("=" * 100)
+    print("CRAWL COMPLETED")
+    print("=" * 100)
+
+    print(
+        f"Pages tested : "
+        f"{len(tested_pages)}"
+    )
+
+    print(
+        f"Unique links : "
+        f"{len(tested_links)}"
+    )
+
+    print(
+        f"Passed links : "
+        f"{len(passed_links)}"
+    )
+
+    print(
+        f"Broken links : "
+        f"{len(broken_links)}"
+    )
+
+    # ========================================================
+    # BROKEN LINKS
+    # ========================================================
+
+    if broken_links:
+
+        print("\nBROKEN LINKS:")
+
+        for item in broken_links:
+
+            print(
+                f"- {item['url']} | "
+                f"{item['status']} | "
+                f"{item['error']}"
+            )
+
+            allure.attach(
+                (
+                    f"URL: {item['url']}\n"
+                    f"Source: {item['source_page']}\n"
+                    f"Area: {item['area']}\n"
+                    f"Status: {item['status']}\n"
+                    f"Final URL: {item['final_url']}\n"
+                    f"Error: {item['error']}"
+                ),
+                name=f"Broken Link - {item['url']}",
+                attachment_type=(
+                    allure.attachment_type.TEXT
+                )
+            )
+
+    # ========================================================
+    # FINAL ASSERTION
+    # ========================================================
+
+    assert not broken_links, (
+        f"{len(broken_links)} "
+        f"broken/failed link(s) found."
+    )

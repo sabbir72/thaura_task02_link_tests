@@ -1,0 +1,26 @@
+```gitignore
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Pytest
+.pytest_cache/
+
+# Allure results and reports
+allure-results/
+allure-report/
+
+# Local Allure installation
+tools/allure/
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+```
