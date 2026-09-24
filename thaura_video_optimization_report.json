@@ -1,0 +1,77 @@
+{
+  "summary": [
+    {
+      "Page": "Home",
+      "Page URL": "https://thaura.ai/home",
+      "Video Elements": 1,
+      "Video Requests": 1,
+      "Failed Video Requests": 0,
+      "Videos With Poster": 1,
+      "preload=metadata": 1,
+      "preload=auto": 0,
+      "preload=none": 0
+    },
+    {
+      "Page": "Pricing",
+      "Page URL": "https://thaura.ai/pricing",
+      "Video Elements": 0,
+      "Video Requests": 0,
+      "Failed Video Requests": 0,
+      "Videos With Poster": 0,
+      "preload=metadata": 0,
+      "preload=auto": 0,
+      "preload=none": 0
+    },
+    {
+      "Page": "API Platform",
+      "Page URL": "https://thaura.ai/api-platform",
+      "Video Elements": 0,
+      "Video Requests": 0,
+      "Failed Video Requests": 0,
+      "Videos With Poster": 0,
+      "preload=metadata": 0,
+      "preload=auto": 0,
+      "preload=none": 0
+    },
+    {
+      "Page": "FAQ",
+      "Page URL": "https://thaura.ai/faq",
+      "Video Elements": 0,
+      "Video Requests": 0,
+      "Failed Video Requests": 0,
+      "Videos With Poster": 0,
+      "preload=metadata": 0,
+      "preload=auto": 0,
+      "preload=none": 0
+    }
+  ],
+  "details": [
+    {
+      "Page": "Home",
+      "Page URL": "https://thaura.ai/home",
+      "Video Index": 0,
+      "Video Source": "https://thaura.ai/analyzing.mp4",
+      "Poster": "/analyzing-poster.webp",
+      "Preload": "metadata",
+      "Autoplay": true,
+      "Muted": true,
+      "Controls": false,
+      "Loop": true,
+      "Playsinline": true,
+      "Width Attribute": "",
+      "Height Attribute": "",
+      "Rendered Width": 648,
+      "Rendered Height": 363,
+      "Ready State": 4,
+      "Network State": 1,
+      "Duration (sec)": 26.933,
+      "HTTP Status": 206,
+      "Content-Type": "video/mp4",
+      "Content-Length": "820645",
+      "Response Body Size (bytes)": 822287,
+      "Response Body Size (KB)": 803.01,
+      "Loading Time (ms)": 1177.68,
+      "Optimization Observation": "preload=metadata; poster configured; autoplay enabled"
+    }
+  ]
+}

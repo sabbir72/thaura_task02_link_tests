@@ -1,0 +1,2 @@
+Page,Page URL,Video Index,Video Source,Poster,Preload,Autoplay,Muted,Controls,Loop,Playsinline,Width Attribute,Height Attribute,Rendered Width,Rendered Height,Ready State,Network State,Duration (sec),HTTP Status,Content-Type,Content-Length,Response Body Size (bytes),Response Body Size (KB),Loading Time (ms),Optimization Observation
+Home,https://thaura.ai/home,0,https://thaura.ai/analyzing.mp4,/analyzing-poster.webp,metadata,True,True,False,True,True,,,648,363,4,1,26.933,206,video/mp4,820645,822287,803.01,1177.68,preload=metadata; poster configured; autoplay enabled
