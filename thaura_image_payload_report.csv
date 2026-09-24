@@ -1,0 +1,10 @@
+Page,Page URL,Status,Resource Type,Image URL,Extension,Content-Type,Content-Length,Actual Response Size,Natural Width,Natural Height,Rendered Width,Rendered Height,Large Image Candidate
+Home,https://thaura.ai/home,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A,10541,1215,1519,40,48,No
+Home,https://thaura.ai/home,200,image,https://thaura.ai/analyzing-poster.webp,webp,image/webp,10476,10476,N/A,N/A,N/A,N/A,No
+Home,https://thaura.ai/home,200,image,https://thaura.ai/hero.webp,webp,image/webp,168664,168664,1024,1024,536,536,Yes
+Pricing,https://thaura.ai/pricing,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A,10541,1215,1519,40,48,No
+Pricing,https://thaura.ai/pricing,200,image,https://thaura.ai/pricing.webp,webp,image/webp,91348,91348,1024,1024,536,536,No
+API Platform,https://thaura.ai/api-platform,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A,10541,1215,1519,40,48,No
+API Platform,https://thaura.ai/api-platform,200,image,https://thaura.ai/api.webp,webp,image/webp,77386,77386,1024,1024,536,536,No
+FAQ,https://thaura.ai/faq,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A,10541,1215,1519,40,48,No
+FAQ,https://thaura.ai/faq,200,image,https://thaura.ai/faq.webp,webp,image/webp,118176,118176,1024,1024,536,536,Yes

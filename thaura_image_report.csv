@@ -1,0 +1,10 @@
+Page,Page URL,Status,Resource Type,Image URL,Extension,Content-Type,Content-Length
+Home,https://thaura.ai/home,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A
+Home,https://thaura.ai/home,200,image,https://thaura.ai/hero.webp,webp,image/webp,168664
+Home,https://thaura.ai/home,200,image,https://thaura.ai/analyzing-poster.webp,webp,image/webp,10476
+Pricing,https://thaura.ai/pricing,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A
+Pricing,https://thaura.ai/pricing,200,image,https://thaura.ai/pricing.webp,webp,image/webp,91348
+API Platform,https://thaura.ai/api-platform,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A
+API Platform,https://thaura.ai/api-platform,200,image,https://thaura.ai/api.webp,webp,image/webp,77386
+FAQ,https://thaura.ai/faq,200,image,https://thaura.ai/logo-2.svg,svg,image/svg+xml,N/A
+FAQ,https://thaura.ai/faq,200,image,https://thaura.ai/faq.webp,webp,image/webp,118176

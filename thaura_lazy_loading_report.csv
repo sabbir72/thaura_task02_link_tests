@@ -1,0 +1,10 @@
+Page,Page URL,Image URL,Status,Content-Type,Load Phase,Requested After Scroll,DOM loading Attribute,Natural Width,Natural Height,Rendered Width,Rendered Height,Viewport Visible After Scroll,Image Complete After Scroll
+Home,https://thaura.ai/home,https://thaura.ai/logo-2.svg,200,image/svg+xml,initial_load,No,lazy,1215,1519,40,48,False,True
+Home,https://thaura.ai/home,https://thaura.ai/hero.webp,200,image/webp,initial_load,No,Not set / not matched,1024,1024,536,536,True,True
+Home,https://thaura.ai/home,https://thaura.ai/analyzing-poster.webp,200,image/webp,initial_load,No,Not set / not matched,N/A,N/A,N/A,N/A,N/A,N/A
+Pricing,https://thaura.ai/pricing,https://thaura.ai/logo-2.svg,200,image/svg+xml,initial_load,No,lazy,1215,1519,40,48,False,True
+Pricing,https://thaura.ai/pricing,https://thaura.ai/pricing.webp,200,image/webp,initial_load,No,Not set / not matched,1024,1024,536,536,True,True
+API Platform,https://thaura.ai/api-platform,https://thaura.ai/logo-2.svg,200,image/svg+xml,initial_load,No,lazy,1215,1519,40,48,False,True
+API Platform,https://thaura.ai/api-platform,https://thaura.ai/api.webp,200,image/webp,initial_load,No,Not set / not matched,1024,1024,536,536,True,True
+FAQ,https://thaura.ai/faq,https://thaura.ai/logo-2.svg,200,image/svg+xml,initial_load,No,lazy,1215,1519,40,48,False,True
+FAQ,https://thaura.ai/faq,https://thaura.ai/faq.webp,200,image/webp,initial_load,No,Not set / not matched,1024,1024,536,536,True,True
