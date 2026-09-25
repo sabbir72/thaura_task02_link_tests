@@ -1,0 +1,2 @@
+Page,Page URL,Video Index,Poster URL,Poster HTTP Status,Poster Content-Type,Content-Length,Response Body Size (bytes),Response Body Size (KB),Poster Natural Width,Poster Natural Height,Rendered Video Width,Rendered Video Height,Preload,Autoplay,Muted,Controls,Loop,Playsinline,Video Ready State,Video Network State,Video Duration (sec),Optimization Observation
+Home,https://thaura.ai/home,0,/analyzing-poster.webp,200,image/webp,10476,11215,10.95,N/A,N/A,648,363,metadata,True,True,False,True,True,4,1,26.933,WebP poster; Small payload

@@ -1,0 +1,59 @@
+{
+  "summary": [
+    {
+      "Page": "Home",
+      "Page URL": "https://thaura.ai/home",
+      "Video Elements": 1,
+      "Videos With Poster": 1,
+      "Poster Image Responses": 1
+    },
+    {
+      "Page": "Pricing",
+      "Page URL": "https://thaura.ai/pricing",
+      "Video Elements": 0,
+      "Videos With Poster": 0,
+      "Poster Image Responses": 0
+    },
+    {
+      "Page": "API Platform",
+      "Page URL": "https://thaura.ai/api-platform",
+      "Video Elements": 0,
+      "Videos With Poster": 0,
+      "Poster Image Responses": 0
+    },
+    {
+      "Page": "FAQ",
+      "Page URL": "https://thaura.ai/faq",
+      "Video Elements": 0,
+      "Videos With Poster": 0,
+      "Poster Image Responses": 0
+    }
+  ],
+  "details": [
+    {
+      "Page": "Home",
+      "Page URL": "https://thaura.ai/home",
+      "Video Index": 0,
+      "Poster URL": "/analyzing-poster.webp",
+      "Poster HTTP Status": 200,
+      "Poster Content-Type": "image/webp",
+      "Content-Length": "10476",
+      "Response Body Size (bytes)": 11215,
+      "Response Body Size (KB)": 10.95,
+      "Poster Natural Width": "N/A",
+      "Poster Natural Height": "N/A",
+      "Rendered Video Width": 648,
+      "Rendered Video Height": 363,
+      "Preload": "metadata",
+      "Autoplay": true,
+      "Muted": true,
+      "Controls": false,
+      "Loop": true,
+      "Playsinline": true,
+      "Video Ready State": 4,
+      "Video Network State": 1,
+      "Video Duration (sec)": 26.933,
+      "Optimization Observation": "WebP poster; Small payload"
+    }
+  ]
+}
